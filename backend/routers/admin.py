@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Seat, CheckInSession, AttendanceRecord
 from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
 from auth import hash_password, require_admin
 from datetime import datetime, date
+import io
+import qrcode
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -221,3 +224,21 @@ def admin_attendance(
             "total_minutes": sum(r.total_minutes for r in records),
         })
     return result
+
+
+@router.get("/seats/{seat_id}/qrcode")
+def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    seat = db.query(Seat).filter(Seat.id == seat_id).first()
+    if not seat:
+        raise HTTPException(status_code=404, detail="Seat not found")
+
+    url = f"http://localhost:5173/checkin?token={seat.token}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
