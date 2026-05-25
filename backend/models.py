@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -56,6 +56,8 @@ class AttendanceRecord(Base):
     total_minutes = Column(Integer, default=0)
     is_valid = Column(Boolean, default=False)
     is_weekend = Column(Boolean, default=False)
+
+    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_user_date"),)
 
     user = relationship("User", back_populates="attendance_records")
 
