@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth
+from routers import auth, admin
 
 Base.metadata.create_all(bind=engine)
 
@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(admin.router)
 
 
 @app.get("/api/health")
