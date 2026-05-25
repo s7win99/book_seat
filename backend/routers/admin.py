@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Seat, CheckInSession, AttendanceRecord
 from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
-from auth import hash_password, require_admin
+from auth import hash_password, require_admin, require_superadmin
 from datetime import datetime, date
 import io
 import qrcode
@@ -67,6 +67,25 @@ def reset_password(user_id: int, admin: User = Depends(require_admin), db: Sessi
     user.password_hash = hash_password("123456")
     db.commit()
     return {"message": "Password reset to 123456"}
+
+
+@router.put("/users/{user_id}/role")
+def change_user_role(
+    user_id: int,
+    role: str = Query(...),
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    if role not in ("user", "admin", "superadmin"):
+        raise HTTPException(status_code=400, detail="Invalid role")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+    user.role = role
+    db.commit()
+    return {"message": f"Role changed to {role}"}
 
 
 @router.get("/seats", response_model=list[SeatOut])

@@ -11,12 +11,18 @@ if not db.query(models.User).filter(models.User.username == "admin").first():
         username="admin",
         name="Admin",
         password_hash=hash_password("admin123"),
-        role="admin",
+        role="superadmin",
     )
     db.add(admin)
     db.commit()
-    print("Admin user created: admin / admin123")
+    print("Admin user created: admin / admin123 (superadmin)")
 else:
-    print("Admin user already exists")
+    existing = db.query(models.User).filter(models.User.username == "admin").first()
+    if existing.role != "superadmin":
+        existing.role = "superadmin"
+        db.commit()
+        print("Admin user upgraded to superadmin")
+    else:
+        print("Admin user already exists (superadmin)")
 
 db.close()

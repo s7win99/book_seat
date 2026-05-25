@@ -23,31 +23,59 @@
         <div v-for="u in users" :key="u.id" class="list-row">
           <div class="row-info">
             <strong>{{ u.name }}</strong>
-            <span class="meta">{{ u.username }} · {{ u.role }}</span>
+            <span class="meta">{{ u.username }} · {{ roleLabel(u.role) }}</span>
           </div>
           <div class="row-actions">
+            <select
+              v-if="auth.isSuperAdmin && u.id !== auth.user?.id"
+              :value="u.role"
+              @change="changeRole(u.id, $event.target.value)"
+              class="role-select"
+            >
+              <option value="user">用户</option>
+              <option value="admin">管理员</option>
+              <option value="superadmin">超级管理员</option>
+            </select>
             <button @click="resetPassword(u.id)">重置密码</button>
-            <button class="danger" @click="deleteUser(u.id)" v-if="u.role !== 'admin'">删除</button>
+            <button class="danger" @click="deleteUser(u.id)" v-if="u.role !== 'superadmin' || auth.isSuperAdmin">删除</button>
           </div>
         </div>
       </div>
 
       <!-- Seats Tab -->
       <div v-if="tab === 'seats'">
-        <button class="btn-add" @click="showSeatForm = true">+ 添加座位</button>
+        <button class="btn-add" @click="showSeatForm = true; editingSeatId = null; seatForm = { name: '', seat_type: 'shared', assigned_user_id: null }">+ 添加座位</button>
         <div v-if="showSeatForm" class="form-card">
           <input v-model="seatForm.name" placeholder="座位名称" />
-          <select v-model="seatForm.seat_type">
+          <select v-model="seatForm.seat_type" @change="onSeatTypeChange">
             <option value="shared">共享</option>
             <option value="fixed">固定</option>
           </select>
-          <select v-if="seatForm.seat_type === 'fixed'" v-model="seatForm.assigned_user_id">
-            <option :value="null">选择用户</option>
-            <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
-          </select>
+          <div v-if="seatForm.seat_type === 'fixed'" class="user-search">
+            <input
+              v-model="userSearch"
+              placeholder="输入用户名或姓名搜索"
+              @input="showUserSuggestions = true"
+              @focus="showUserSuggestions = true"
+            />
+            <div v-if="showUserSuggestions && filteredUsers.length > 0" class="suggestions">
+              <div
+                v-for="u in filteredUsers"
+                :key="u.id"
+                class="suggestion-item"
+                @mousedown.prevent="selectUser(u)"
+              >
+                {{ u.name }} ({{ u.username }})
+              </div>
+            </div>
+          </div>
+          <p v-if="seatForm.seat_type === 'fixed' && seatForm.assigned_user_id" class="selected-user">
+            已选：{{ userSearch }}
+            <button class="clear-btn" @click="clearSelectedUser">×</button>
+          </p>
           <div class="form-actions">
-            <button @click="createSeat">保存</button>
-            <button class="cancel" @click="showSeatForm = false">取消</button>
+            <button @click="editingSeatId ? updateSeat() : createSeat()">{{ editingSeatId ? '更新' : '保存' }}</button>
+            <button class="cancel" @click="showSeatForm = false; editingSeatId = null">取消</button>
           </div>
         </div>
         <div v-for="s in seats" :key="s.id" class="list-row">
@@ -56,6 +84,7 @@
             <span class="meta">{{ s.seat_type === 'fixed' ? '固定' : '共享' }}{{ s.assigned_user_name ? ' · ' + s.assigned_user_name : '' }}</span>
           </div>
           <div class="row-actions">
+            <button @click="editSeat(s)">编辑</button>
             <button @click="refreshToken(s.id)">刷新Token</button>
             <button @click="viewQR(s.id)">二维码</button>
             <button class="danger" @click="deleteSeat(s.id)">删除</button>
@@ -83,9 +112,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import NavBar from '../components/NavBar.vue'
+import { useAuthStore } from '../stores/auth'
 import api from '../api'
+
+const auth = useAuthStore()
 
 const tab = ref('users')
 const users = ref([])
@@ -93,10 +125,54 @@ const seats = ref([])
 const attendance = ref([])
 const showUserForm = ref(false)
 const showSeatForm = ref(false)
+const editingSeatId = ref(null)
 const userForm = ref({ username: '', name: '', password: '' })
 const seatForm = ref({ name: '', seat_type: 'shared', assigned_user_id: null })
+const userSearch = ref('')
+const showUserSuggestions = ref(false)
 const startDate = ref('')
 const endDate = ref('')
+
+const filteredUsers = computed(() => {
+  const q = userSearch.value.toLowerCase().trim()
+  if (!q) return users.value
+  return users.value.filter(u =>
+    u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q)
+  )
+})
+
+function selectUser(user) {
+  seatForm.value.assigned_user_id = user.id
+  userSearch.value = `${user.name} (${user.username})`
+  showUserSuggestions.value = false
+}
+
+function clearSelectedUser() {
+  seatForm.value.assigned_user_id = null
+  userSearch.value = ''
+}
+
+function onSeatTypeChange() {
+  if (seatForm.value.seat_type === 'shared') {
+    seatForm.value.assigned_user_id = null
+    userSearch.value = ''
+  }
+}
+
+function roleLabel(role) {
+  if (role === 'superadmin') return '超级管理员'
+  if (role === 'admin') return '管理员'
+  return '用户'
+}
+
+async function changeRole(userId, newRole) {
+  try {
+    await api.put(`/api/admin/users/${userId}/role?role=${newRole}`)
+    await loadUsers()
+  } catch (e) {
+    alert(e.response?.data?.detail || '修改角色失败')
+  }
+}
 
 async function loadUsers() {
   const res = await api.get('/api/admin/users')
@@ -139,6 +215,29 @@ async function resetPassword(id) {
 async function createSeat() {
   await api.post('/api/admin/seats', seatForm.value)
   showSeatForm.value = false
+  seatForm.value = { name: '', seat_type: 'shared', assigned_user_id: null }
+  await loadSeats()
+}
+
+function editSeat(seat) {
+  editingSeatId.value = seat.id
+  seatForm.value = {
+    name: seat.name,
+    seat_type: seat.seat_type,
+    assigned_user_id: seat.assigned_user_id,
+  }
+  if (seat.seat_type === 'fixed' && seat.assigned_user_name) {
+    userSearch.value = seat.assigned_user_name
+  } else {
+    userSearch.value = ''
+  }
+  showSeatForm.value = true
+}
+
+async function updateSeat() {
+  await api.put(`/api/admin/seats/${editingSeatId.value}`, seatForm.value)
+  showSeatForm.value = false
+  editingSeatId.value = null
   seatForm.value = { name: '', seat_type: 'shared', assigned_user_id: null }
   await loadSeats()
 }
@@ -218,6 +317,55 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 0.9rem;
 }
+.user-search {
+  position: relative;
+}
+.user-search input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.suggestion-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.suggestion-item:hover {
+  background: #f5f5f5;
+}
+.selected-user {
+  font-size: 0.8rem;
+  color: #4caf50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.clear-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+}
+.clear-btn:hover {
+  color: #e53935;
+}
 .form-actions {
   display: flex;
   gap: 0.5rem;
@@ -270,6 +418,14 @@ onMounted(() => {
 .row-actions button.danger {
   color: #e53935;
   border-color: #e53935;
+}
+.role-select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background: white;
+  cursor: pointer;
 }
 .date-filter {
   display: flex;
