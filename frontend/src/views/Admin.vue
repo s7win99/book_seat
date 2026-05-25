@@ -290,8 +290,12 @@ async function exportAllQR() {
 
 async function cancelCheckin(seat) {
   if (!confirm(`确定取消 ${seat.occupant_name} 的签到？该段签到时间将不被记录。`)) return
-  await api.post(`/api/admin/cancel-checkin/${seat.occupant_user_id}`)
-  await loadSeats()
+  try {
+    await api.post(`/api/admin/cancel-checkin/${seat.occupant_user_id}`)
+    await loadSeats()
+  } catch (e) {
+    alert(e.response?.data?.detail || '取消签到失败')
+  }
 }
 
 async function viewQR(id) {

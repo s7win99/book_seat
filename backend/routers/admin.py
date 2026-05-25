@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, Seat, CheckInSession, AttendanceRecord
+from models import User, Seat, CheckInSession, AttendanceRecord, Cooldown
 from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
 from auth import hash_password, require_admin, require_superadmin
 from datetime import datetime, date
@@ -246,7 +246,6 @@ def force_checkout(user_id: int, admin: User = Depends(require_admin), db: Sessi
 
 @router.post("/cancel-checkin/{user_id}")
 def cancel_checkin(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    from models import Cooldown
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
