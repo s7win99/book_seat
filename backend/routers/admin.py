@@ -197,7 +197,7 @@ def refresh_seat_token(seat_id: int, admin: User = Depends(require_admin), db: S
     )
 
 
-@router.post("/seats/refresh-all-tokens")
+@router.post("/seats/refresh-all-tokens", response_model=list[SeatOut])
 def refresh_all_tokens(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     import secrets
     seats = db.query(Seat).all()

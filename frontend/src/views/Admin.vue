@@ -258,9 +258,13 @@ async function refreshToken(id) {
 
 async function refreshAllTokens() {
   if (!confirm('确定刷新全部座位的Token？刷新后旧二维码将失效。')) return
-  await api.post('/api/admin/seats/refresh-all-tokens')
-  alert('全部Token已刷新')
-  await loadSeats()
+  try {
+    await api.post('/api/admin/seats/refresh-all-tokens')
+    alert('全部Token已刷新')
+    await loadSeats()
+  } catch (e) {
+    alert('刷新失败: ' + (e.response?.data?.detail || e.message))
+  }
 }
 
 async function viewQR(id) {
