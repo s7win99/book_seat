@@ -269,18 +269,22 @@ async function refreshAllTokens() {
 }
 
 async function exportAllQR() {
-  const res = await api.get('/api/admin/seats/qrcode-batch', { responseType: 'blob' })
-  const contentType = res.headers['content-type']
-  const url = URL.createObjectURL(res.data)
-  const a = document.createElement('a')
-  a.href = url
-  if (contentType && contentType.includes('zip')) {
-    a.download = '座位二维码.zip'
-  } else {
-    a.download = '座位二维码.png'
+  try {
+    const res = await api.get('/api/admin/seats/qrcode-batch', { responseType: 'blob' })
+    const contentType = res.headers['content-type']
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    if (contentType && contentType.includes('zip')) {
+      a.download = '座位二维码.zip'
+    } else {
+      a.download = '座位二维码.png'
+    }
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('导出失败: ' + (e.response?.data?.detail || e.message))
   }
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 async function viewQR(id) {
