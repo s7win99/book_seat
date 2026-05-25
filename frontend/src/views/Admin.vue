@@ -47,6 +47,7 @@
         <div class="seat-actions">
           <button class="btn-add" @click="showSeatForm = true; editingSeatId = null; seatForm = { name: '', seat_type: 'shared', assigned_user_id: null }">+ 添加座位</button>
           <button class="btn-batch" @click="refreshAllTokens">刷新全部Token</button>
+          <button class="btn-batch" @click="exportAllQR">导出全部二维码</button>
         </div>
         <div v-if="showSeatForm" class="form-card">
           <input v-model="seatForm.name" placeholder="座位名称" />
@@ -265,6 +266,21 @@ async function refreshAllTokens() {
   } catch (e) {
     alert('刷新失败: ' + (e.response?.data?.detail || e.message))
   }
+}
+
+async function exportAllQR() {
+  const res = await api.get('/api/admin/seats/qrcode-batch', { responseType: 'blob' })
+  const contentType = res.headers['content-type']
+  const url = URL.createObjectURL(res.data)
+  const a = document.createElement('a')
+  a.href = url
+  if (contentType && contentType.includes('zip')) {
+    a.download = '座位二维码.zip'
+  } else {
+    a.download = '座位二维码.png'
+  }
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 async function viewQR(id) {

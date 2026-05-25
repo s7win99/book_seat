@@ -309,3 +309,79 @@ def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Sess
     canvas.save(buf, format="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+
+
+@router.get("/seats/qrcode-batch")
+def batch_qrcode(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    import zipfile
+    from PIL import Image, ImageDraw, ImageFont
+
+    seats = db.query(Seat).all()
+    if not seats:
+        raise HTTPException(status_code=400, detail="没有座位可导出")
+
+    def generate_labeled_qr(seat):
+        url = f"http://localhost:5173/checkin?token={seat.token}"
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        qr_w, qr_h = qr_img.size
+        text_height = 40
+        canvas = Image.new("RGB", (qr_w, qr_h + text_height), "white")
+        canvas.paste(qr_img, (0, 0))
+        draw = ImageDraw.Draw(canvas)
+        font = ImageFont.load_default(size=20)
+        bbox = draw.textbbox((0, 0), seat.name, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_x = (qr_w - text_w) // 2
+        draw.text((text_x, qr_h + 8), seat.name, fill="black", font=font)
+        return canvas
+
+    # A4 at 300 DPI
+    page_w, page_h = 2480, 3508
+    cols, rows = 3, 3
+    per_page = cols * rows
+    margin_x, margin_y = 100, 100
+    gap_x, gap_y = 50, 70
+    cell_w = (page_w - 2 * margin_x - (cols - 1) * gap_x) // cols
+    cell_h = (page_h - 2 * margin_y - (rows - 1) * gap_y) // rows
+
+    # Scale QR to fit in cell (leave room for text)
+    qr_target_h = cell_h - 80
+    qr_target_w = cell_w - 40
+
+    pages = []
+    for page_start in range(0, len(seats), per_page):
+        page_seats = seats[page_start:page_start + per_page]
+        page = Image.new("RGB", (page_w, page_h), "white")
+        for idx, seat in enumerate(page_seats):
+            row = idx // cols
+            col = idx % cols
+            labeled_qr = generate_labeled_qr(seat)
+            # Resize to fit cell
+            scale = min(qr_target_w / labeled_qr.size[0], qr_target_h / labeled_qr.size[1])
+            new_size = (int(labeled_qr.size[0] * scale), int(labeled_qr.size[1] * scale))
+            labeled_qr = labeled_qr.resize(new_size, Image.LANCZOS)
+            # Center in cell
+            x = margin_x + col * (cell_w + gap_x) + (cell_w - new_size[0]) // 2
+            y = margin_y + row * (cell_h + gap_y) + (cell_h - new_size[1]) // 2
+            page.paste(labeled_qr, (x, y))
+        pages.append(page)
+
+    if len(pages) == 1:
+        buf = io.BytesIO()
+        pages[0].save(buf, format="PNG")
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="image/png")
+
+    # Multiple pages: return ZIP
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i, page in enumerate(pages):
+            page_buf = io.BytesIO()
+            page.save(page_buf, format="PNG")
+            page_buf.seek(0)
+            zf.writestr(f"qrcode_page{i + 1}.png", page_buf.read())
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=qrcodes.zip"})
