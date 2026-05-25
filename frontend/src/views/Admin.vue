@@ -91,6 +91,7 @@
             <button @click="editSeat(s)">编辑</button>
             <button @click="refreshToken(s.id)">刷新Token</button>
             <button @click="viewQR(s.id)">二维码</button>
+            <button v-if="s.is_occupied" class="warning" @click="cancelCheckin(s)">取消签到</button>
             <button class="danger" @click="deleteSeat(s.id)">删除</button>
           </div>
         </div>
@@ -287,6 +288,12 @@ async function exportAllQR() {
   }
 }
 
+async function cancelCheckin(seat) {
+  if (!confirm(`确定取消 ${seat.occupant_name} 的签到？该段签到时间将不被记录。`)) return
+  await api.post(`/api/admin/cancel-checkin/${seat.occupant_user_id}`)
+  await loadSeats()
+}
+
 async function viewQR(id) {
   const res = await api.get(`/api/admin/seats/${id}/qrcode`, { responseType: 'blob' })
   const url = URL.createObjectURL(res.data)
@@ -470,6 +477,10 @@ onMounted(() => {
 .row-actions button.danger {
   color: #e53935;
   border-color: #e53935;
+}
+.row-actions button.warning {
+  color: #e65100;
+  border-color: #e65100;
 }
 .role-select {
   padding: 0.375rem 0.5rem;

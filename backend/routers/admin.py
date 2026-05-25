@@ -244,6 +244,28 @@ def force_checkout(user_id: int, admin: User = Depends(require_admin), db: Sessi
     return {"message": f"Force checked out {user.name}"}
 
 
+@router.post("/cancel-checkin/{user_id}")
+def cancel_checkin(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    from models import Cooldown
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    active = db.query(CheckInSession).filter(
+        CheckInSession.user_id == user_id,
+        CheckInSession.check_out_time.is_(None),
+    ).first()
+    if not active:
+        raise HTTPException(status_code=404, detail="该用户当前没有签到")
+    # Delete the session so time is not recorded
+    db.delete(active)
+    # Clear cooldown so user can check in again immediately
+    cooldown = db.query(Cooldown).filter(Cooldown.user_id == user_id).first()
+    if cooldown:
+        db.delete(cooldown)
+    db.commit()
+    return {"message": f"已取消 {user.name} 的签到"}
+
+
 @router.get("/attendance")
 def admin_attendance(
     start_date: date = Query(default=None),
