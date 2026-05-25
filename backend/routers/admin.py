@@ -278,6 +278,8 @@ def admin_attendance(
 
 @router.get("/seats/{seat_id}/qrcode")
 def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    from PIL import Image, ImageDraw, ImageFont
+
     seat = db.query(Seat).filter(Seat.id == seat_id).first()
     if not seat:
         raise HTTPException(status_code=404, detail="Seat not found")
@@ -286,9 +288,24 @@ def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Sess
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(url)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    # Create canvas: QR code + space for text below
+    qr_w, qr_h = qr_img.size
+    text_height = 40
+    canvas = Image.new("RGB", (qr_w, qr_h + text_height), "white")
+    canvas.paste(qr_img, (0, 0))
+
+    # Draw seat name centered below QR code
+    draw = ImageDraw.Draw(canvas)
+    font = ImageFont.load_default(size=20)
+    bbox = draw.textbbox((0, 0), seat.name, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_x = (qr_w - text_w) // 2
+    text_y = qr_h + 8
+    draw.text((text_x, text_y), seat.name, fill="black", font=font)
 
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    canvas.save(buf, format="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
