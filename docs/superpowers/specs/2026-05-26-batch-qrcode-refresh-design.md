@@ -2,9 +2,10 @@
 
 ## Overview
 
-Admin dashboard needs two new features:
+Admin dashboard needs three new features:
 1. One-click refresh all seat tokens
 2. Batch export seat QR codes as printable A4 grid sheets with seat name labels
+3. Cancel a user's active check-in (time not recorded in attendance)
 
 ## Approach
 
@@ -120,12 +121,41 @@ Empty cells (when seats < 9 per page) remain white.
 
 ---
 
+## Feature 4: Cancel Active Check-in
+
+### Difference from Force Checkout
+
+- **Force checkout** (`POST /api/admin/force-checkout/{user_id}`): ends the session normally, `check_out_time` is set, time counts towards attendance
+- **Cancel check-in** (`POST /api/admin/cancel-checkin/{user_id}`): deletes the session entirely, time does NOT count towards attendance
+
+### Backend
+
+**New endpoint:** `POST /api/admin/cancel-checkin/{user_id}`
+
+- Requires admin role
+- Finds the user's active session (`check_out_time IS NULL`)
+- If no active session, return 404 "该用户当前没有签到"
+- Deletes the session record from the database
+- Also deletes the user's cooldown record so they can check in again immediately
+- Returns `{"message": "已取消 {username} 的签到"}`
+
+### Frontend
+
+In the seats tab, for seats that are currently occupied (`is_occupied === true`):
+
+- Show a "取消签到" button next to existing action buttons
+- On click: show `confirm()` dialog ("确定取消 {occupant_name} 的签到？该段签到时间将不被记录。")
+- On confirm: call `POST /api/admin/cancel-checkin/{occupant_user_id}`
+- Reload seat list after success
+
+---
+
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `backend/routers/admin.py` | Add `refresh-all-tokens` and `qrcode-batch` endpoints; modify `qrcode` endpoint to add label |
-| `frontend/src/views/Admin.vue` | Add two new buttons in seats tab; add download logic |
+| `backend/routers/admin.py` | Add `refresh-all-tokens`, `qrcode-batch`, `cancel-checkin` endpoints; modify `qrcode` endpoint to add label |
+| `frontend/src/views/Admin.vue` | Add refresh/export/cancel buttons in seats tab; add download logic; show cancel button on occupied seats |
 
 ## Dependencies
 
