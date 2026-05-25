@@ -5,6 +5,7 @@ from database import get_db
 from models import User, Seat, CheckInSession, AttendanceRecord, Cooldown
 from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
 from auth import hash_password, require_admin, require_superadmin
+from config import BASE_URL
 from datetime import datetime, date
 import io
 import qrcode
@@ -305,7 +306,7 @@ def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Sess
     if not seat:
         raise HTTPException(status_code=404, detail="Seat not found")
 
-    url = f"http://localhost:5173/checkin?token={seat.token}"
+    url = f"{BASE_URL}/checkin?token={seat.token}"
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(url)
     qr.make(fit=True)
@@ -342,7 +343,7 @@ def batch_qrcode(admin: User = Depends(require_admin), db: Session = Depends(get
         raise HTTPException(status_code=400, detail="没有座位可导出")
 
     def generate_labeled_qr(seat):
-        url = f"http://localhost:5173/checkin?token={seat.token}"
+        url = f"{BASE_URL}/checkin?token={seat.token}"
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(url)
         qr.make(fit=True)
