@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Seat, CheckInSession, AttendanceRecord
-from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut
+from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
 from auth import hash_password, require_admin
-from datetime import datetime
+from datetime import datetime, date
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -189,3 +189,35 @@ def force_checkout(user_id: int, admin: User = Depends(require_admin), db: Sessi
     active.check_out_time = datetime.utcnow()
     db.commit()
     return {"message": f"Force checked out {user.name}"}
+
+
+@router.get("/attendance")
+def admin_attendance(
+    start_date: date = Query(default=None),
+    end_date: date = Query(default=None),
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    if not start_date:
+        start_date = date.today().replace(day=1)
+    if not end_date:
+        end_date = date.today()
+
+    users = db.query(User).filter(User.role == "user").all()
+    result = []
+    for user in users:
+        records = db.query(AttendanceRecord).filter(
+            AttendanceRecord.user_id == user.id,
+            AttendanceRecord.date >= start_date,
+            AttendanceRecord.date <= end_date,
+        ).order_by(AttendanceRecord.date).all()
+
+        result.append({
+            "user_id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "records": records,
+            "total_valid": sum(1 for r in records if r.is_valid),
+            "total_minutes": sum(r.total_minutes for r in records),
+        })
+    return result

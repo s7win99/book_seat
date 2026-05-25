@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth, admin, checkin, seats
+from routers import auth, admin, checkin, seats, attendance
+from services.scheduler import start_scheduler
 
 Base.metadata.create_all(bind=engine)
 
@@ -20,6 +21,9 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(checkin.router)
 app.include_router(seats.router)
+app.include_router(attendance.router)
+
+scheduler = start_scheduler()
 
 
 @app.get("/api/health")
