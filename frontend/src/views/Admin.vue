@@ -44,7 +44,10 @@
 
       <!-- Seats Tab -->
       <div v-if="tab === 'seats'">
-        <button class="btn-add" @click="showSeatForm = true; editingSeatId = null; seatForm = { name: '', seat_type: 'shared', assigned_user_id: null }">+ 添加座位</button>
+        <div class="seat-actions">
+          <button class="btn-add" @click="showSeatForm = true; editingSeatId = null; seatForm = { name: '', seat_type: 'shared', assigned_user_id: null }">+ 添加座位</button>
+          <button class="btn-batch" @click="refreshAllTokens">刷新全部Token</button>
+        </div>
         <div v-if="showSeatForm" class="form-card">
           <input v-model="seatForm.name" placeholder="座位名称" />
           <select v-model="seatForm.seat_type" @change="onSeatTypeChange">
@@ -253,6 +256,13 @@ async function refreshToken(id) {
   await loadSeats()
 }
 
+async function refreshAllTokens() {
+  if (!confirm('确定刷新全部座位的Token？刷新后旧二维码将失效。')) return
+  await api.post('/api/admin/seats/refresh-all-tokens')
+  alert('全部Token已刷新')
+  await loadSeats()
+}
+
 async function viewQR(id) {
   const res = await api.get(`/api/admin/seats/${id}/qrcode`, { responseType: 'blob' })
   const url = URL.createObjectURL(res.data)
@@ -299,6 +309,24 @@ onMounted(() => {
   border-radius: 10px;
   cursor: pointer;
   margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.seat-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.seat-actions .btn-add {
+  flex: 1;
+  margin-bottom: 0;
+}
+.btn-batch {
+  padding: 0.75rem 1rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+  border-radius: 10px;
+  cursor: pointer;
   font-size: 0.9rem;
 }
 .form-card {

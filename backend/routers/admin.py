@@ -197,6 +197,37 @@ def refresh_seat_token(seat_id: int, admin: User = Depends(require_admin), db: S
     )
 
 
+@router.post("/seats/refresh-all-tokens")
+def refresh_all_tokens(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    import secrets
+    seats = db.query(Seat).all()
+    for seat in seats:
+        seat.token = secrets.token_urlsafe(32)
+    db.commit()
+    # Return updated list
+    result = []
+    for seat in seats:
+        db.refresh(seat)
+        assigned_user = db.query(User).filter(User.id == seat.assigned_user_id).first() if seat.assigned_user_id else None
+        active_session = db.query(CheckInSession).filter(
+            CheckInSession.seat_id == seat.id,
+            CheckInSession.check_out_time.is_(None),
+        ).first()
+        occupant = db.query(User).filter(User.id == active_session.user_id).first() if active_session else None
+        result.append(SeatOut(
+            id=seat.id,
+            name=seat.name,
+            seat_type=seat.seat_type,
+            token=seat.token,
+            assigned_user_id=seat.assigned_user_id,
+            assigned_user_name=assigned_user.name if assigned_user else None,
+            is_occupied=active_session is not None,
+            occupant_name=occupant.name if occupant else None,
+            occupant_user_id=occupant.id if occupant else None,
+        ))
+    return result
+
+
 @router.post("/force-checkout/{user_id}")
 def force_checkout(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
