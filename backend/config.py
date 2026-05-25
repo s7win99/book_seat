@@ -1,7 +1,12 @@
 import os
+import secrets
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lab_attendance.db")
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+_default_secret = secrets.token_urlsafe(32)
+SECRET_KEY = os.getenv("SECRET_KEY", _default_secret)
+if not os.getenv("SECRET_KEY"):
+    import warnings
+    warnings.warn("SECRET_KEY not set, using random key (tokens will invalidate on restart)")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 COOLDOWN_MINUTES = 1
