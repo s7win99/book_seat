@@ -3,8 +3,8 @@
     <NavBar />
     <div class="container">
       <div class="period-toggle">
-        <button :class="{ active: period === 'week' }" @click="period = 'week'; load()">This Week</button>
-        <button :class="{ active: period === 'month' }" @click="period = 'month'; load()">This Month</button>
+        <button :class="{ active: period === 'week' }" @click="period = 'week'; load()">本周</button>
+        <button :class="{ active: period === 'month' }" @click="period = 'month'; load()">本月</button>
       </div>
 
       <div class="leaderboard">
@@ -13,10 +13,10 @@
           <div class="name">{{ entry.name }}</div>
           <div class="stats">
             <span class="rate">{{ (entry.attendance_rate * 100).toFixed(1) }}%</span>
-            <span class="count">{{ entry.valid_count }} valid</span>
+            <span class="count">{{ entry.valid_count }}次有效</span>
           </div>
         </div>
-        <p v-if="entries.length === 0" class="empty">No data yet</p>
+        <p v-if="entries.length === 0" class="empty">暂无数据</p>
       </div>
     </div>
   </div>

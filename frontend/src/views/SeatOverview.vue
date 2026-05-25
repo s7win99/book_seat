@@ -4,31 +4,31 @@
     <div class="container">
       <div v-if="status.is_checked_in" class="status-card checked-in">
         <div class="status-info">
-          <h3>Checked In</h3>
-          <p>Seat: {{ status.seat_name }}</p>
-          <p>Time: {{ formatTime(status.elapsed_minutes) }}</p>
+          <h3>已签到</h3>
+          <p>座位：{{ status.seat_name }}</p>
+          <p>已用：{{ formatTime(status.elapsed_minutes) }}</p>
         </div>
         <div class="today-total">
-          <span class="label">Today Total</span>
+          <span class="label">今日累计</span>
           <span class="value">{{ formatTime(status.today_total_minutes) }}</span>
         </div>
       </div>
       <div v-else class="status-card">
-        <p>Not checked in</p>
-        <p class="today-info">Today: {{ formatTime(status.today_total_minutes) }}</p>
+        <p>未签到</p>
+        <p class="today-info">今日：{{ formatTime(status.today_total_minutes) }}</p>
       </div>
 
       <div class="filters">
         <button
-          v-for="f in ['all', 'free', 'occupied']"
-          :key="f"
-          :class="{ active: filter === f }"
-          @click="filter = f"
+          v-for="f in filterOptions"
+          :key="f.key"
+          :class="{ active: filter === f.key }"
+          @click="filter = f.key"
         >
-          {{ f.charAt(0).toUpperCase() + f.slice(1) }}
-          <span v-if="f === 'all'">({{ seats.length }})</span>
-          <span v-if="f === 'free'">({{ freeCount }})</span>
-          <span v-if="f === 'occupied'">({{ occupiedCount }})</span>
+          {{ f.label }}
+          <span v-if="f.key === 'all'">({{ seats.length }})</span>
+          <span v-if="f.key === 'free'">({{ freeCount }})</span>
+          <span v-if="f.key === 'occupied'">({{ occupiedCount }})</span>
         </button>
       </div>
 
@@ -45,13 +45,13 @@
           <div class="seat-info">
             <div class="seat-name">{{ seat.name }}</div>
             <div class="seat-meta">
-              {{ seat.seat_type === 'fixed' ? 'Fixed' : 'Shared' }}
+              {{ seat.seat_type === 'fixed' ? '固定' : '共享' }}
               <span v-if="seat.assigned_user_name"> · {{ seat.assigned_user_name }}</span>
             </div>
           </div>
           <div class="seat-status">
             <span v-if="seat.is_occupied" class="status-occupied">{{ seat.occupant_name }}</span>
-            <span v-else class="status-free">Free</span>
+            <span v-else class="status-free">空闲</span>
           </div>
         </div>
       </div>
@@ -69,6 +69,12 @@ const router = useRouter()
 const seats = ref([])
 const status = ref({ is_checked_in: false, today_total_minutes: 0 })
 const filter = ref('all')
+
+const filterOptions = [
+  { key: 'all', label: '全部' },
+  { key: 'free', label: '空闲' },
+  { key: 'occupied', label: '占用' },
+]
 
 const freeCount = computed(() => seats.value.filter(s => !s.is_occupied).length)
 const occupiedCount = computed(() => seats.value.filter(s => s.is_occupied).length)

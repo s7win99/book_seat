@@ -5,11 +5,11 @@
       <div class="stats-row">
         <div class="stat-card">
           <span class="stat-value">{{ validCount }}</span>
-          <span class="stat-label">Valid Attendances</span>
+          <span class="stat-label">有效出勤</span>
         </div>
         <div class="stat-card">
           <span class="stat-value">{{ formatTime(totalMinutes) }}</span>
-          <span class="stat-label">Total Time</span>
+          <span class="stat-label">总时长</span>
         </div>
       </div>
 
@@ -20,7 +20,7 @@
           <button @click="nextMonth">&gt;</button>
         </div>
         <div class="calendar-weekdays">
-          <span v-for="d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="d">{{ d }}</span>
+          <span v-for="d in ['一','二','三','四','五','六','日']" :key="d">{{ d }}</span>
         </div>
         <div class="calendar-days">
           <span
@@ -40,12 +40,12 @@
       </div>
 
       <div class="history">
-        <h3>Session History</h3>
+        <h3>签到记录</h3>
         <div v-for="record in records" :key="record.id" class="history-row">
           <span class="date">{{ record.date }}</span>
           <span class="minutes">{{ record.total_minutes }}min</span>
           <span class="badge" :class="record.is_valid ? 'valid' : 'invalid'">
-            {{ record.is_valid ? 'Valid' : 'Invalid' }}
+            {{ record.is_valid ? '有效' : '无效' }}
           </span>
         </div>
       </div>
@@ -62,7 +62,7 @@ const records = ref([])
 const currentDate = ref(new Date())
 
 const monthLabel = computed(() => {
-  return currentDate.value.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+  return currentDate.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })
 })
 
 const validCount = computed(() => records.value.filter(r => r.is_valid).length)

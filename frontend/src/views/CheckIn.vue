@@ -2,54 +2,54 @@
   <div>
     <NavBar />
     <div class="container">
-      <div v-if="loading" class="loading">Loading...</div>
+      <div v-if="loading" class="loading">加载中...</div>
       <div v-else-if="error" class="error-card">
         <p>{{ error }}</p>
-        <button @click="$router.push('/')">Back to Seats</button>
+        <button @click="$router.push('/')">返回座位</button>
       </div>
       <div v-else class="checkin-card">
         <h2>{{ seatInfo.name }}</h2>
         <span class="badge" :class="seatInfo.seat_type">
-          {{ seatInfo.seat_type === 'fixed' ? 'Fixed' : 'Shared' }}
+          {{ seatInfo.seat_type === 'fixed' ? '固定座位' : '共享座位' }}
         </span>
 
         <div v-if="seatInfo.is_occupied && !isMySeat" class="message occupied">
-          Occupied by {{ seatInfo.occupant_name }}
+          该座位已被占用：{{ seatInfo.occupant_name }}
         </div>
 
         <div v-else-if="seatInfo.seat_type === 'fixed' && !isAssignedToMe" class="message reserved">
-          This seat is reserved for {{ seatInfo.assigned_user_name }}
+          该座位为固定座位：{{ seatInfo.assigned_user_name }}
         </div>
 
         <div v-else-if="hasFixedSeat && seatInfo.seat_type === 'shared'" class="message reserved">
-          You have a fixed seat, please check in there
+          您有固定座位，请在固定座位签到
         </div>
 
         <div v-else-if="cooldownRemaining > 0" class="message cooldown">
-          Cooldown: please wait {{ cooldownRemaining }} seconds
+          冷静期：请等待 {{ cooldownRemaining }} 秒
         </div>
 
         <div v-else-if="isMySeat" class="action-section">
           <div class="elapsed">
-            <span class="label">Elapsed Time</span>
+            <span class="label">已用时间</span>
             <span class="time">{{ formatTime(elapsedMinutes) }}</span>
           </div>
-          <button class="btn checkout" @click="handleCheckout">Confirm Check-out</button>
+          <button class="btn checkout" @click="handleCheckout">确认签退</button>
         </div>
 
         <div v-else-if="isAlreadyCheckedIn" class="action-section">
           <div class="switch-info">
-            <p>You are currently at seat <strong>{{ currentSeatName }}</strong></p>
-            <p>Switch to {{ seatInfo.name }}?</p>
+            <p>您当前在座位 <strong>{{ currentSeatName }}</strong></p>
+            <p>是否切换到{{ seatInfo.name }}？</p>
           </div>
-          <button class="btn switch" @click="handleCheckin">Switch to this seat</button>
+          <button class="btn switch" @click="handleCheckin">切换到该座位</button>
         </div>
 
         <div v-else class="action-section">
-          <button class="btn checkin" @click="handleCheckin">Confirm Check-in</button>
+          <button class="btn checkin" @click="handleCheckin">确认签到</button>
         </div>
 
-        <button class="back-link" @click="$router.push('/')">Back to Seats</button>
+        <button class="back-link" @click="$router.push('/')">返回座位</button>
       </div>
     </div>
   </div>
@@ -91,7 +91,7 @@ async function loadSeatInfo() {
   try {
     const token = route.query.token
     if (!token) {
-      error.value = 'No seat token provided'
+      error.value = '未提供座位信息'
       return
     }
     const res = await api.get(`/api/seats/by-token/${token}`)
@@ -106,7 +106,7 @@ async function loadSeatInfo() {
       }
     }
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Failed to load seat info'
+    error.value = e.response?.data?.detail || '加载座位信息失败'
   } finally {
     loading.value = false
   }
@@ -117,7 +117,7 @@ async function handleCheckin() {
     await api.post('/api/checkin', { seat_token: route.query.token })
     router.push('/')
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Check-in failed'
+    error.value = e.response?.data?.detail || '签到失败'
     if (e.response?.status === 429) {
       cooldownRemaining.value = parseInt(e.response.data.detail.match(/\d+/)?.[0] || 60)
     }
@@ -129,7 +129,7 @@ async function handleCheckout() {
     await api.post('/api/checkout', { seat_id: seatInfo.value.id })
     router.push('/')
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Check-out failed'
+    error.value = e.response?.data?.detail || '签退失败'
   }
 }
 

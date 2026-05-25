@@ -1,19 +1,19 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>Lab Attendance System</h2>
+      <h2>实验室考勤系统</h2>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
-          <label>Username</label>
-          <input v-model="username" type="text" required placeholder="Enter username" />
+          <label>用户名</label>
+          <input v-model="username" type="text" required placeholder="请输入用户名" />
         </div>
         <div class="form-group">
-          <label>Password</label>
-          <input v-model="password" type="password" required placeholder="Enter password" />
+          <label>密码</label>
+          <input v-model="password" type="password" required placeholder="请输入密码" />
         </div>
         <p v-if="error" class="error">{{ error }}</p>
         <button type="submit" :disabled="loading">
-          {{ loading ? 'Logging in...' : 'Login' }}
+          {{ loading ? '登录中...' : '登录' }}
         </button>
       </form>
     </div>
@@ -38,9 +38,11 @@ async function handleLogin() {
   error.value = ''
   try {
     await auth.login(username.value, password.value)
-    router.push('/')
+    const redirect = localStorage.getItem('redirectAfterLogin') || '/'
+    localStorage.removeItem('redirectAfterLogin')
+    router.push(redirect)
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Login failed'
+    error.value = e.response?.data?.detail || '登录失败'
   } finally {
     loading.value = false
   }
