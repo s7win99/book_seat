@@ -57,6 +57,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -q -r requirements.txt
 python init_db.py
+chown www-data:www-data lab_attendance.db
 deactivate
 
 # 构建前端
