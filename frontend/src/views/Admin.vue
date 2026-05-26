@@ -145,6 +145,48 @@
       </div>
     </div>
 
+    <!-- Import Preview Modal -->
+    <div v-if="importPreview" class="modal-overlay" @click.self="importPreview = null">
+      <div class="modal modal-wide">
+        <h3>预览导入数据</h3>
+        <p class="preview-summary">
+          共 {{ importPreview.total }} 行：
+          <span class="success">{{ importPreview.rows.length }} 条有效</span>
+          <span v-if="importPreview.errors.length" class="error"> · {{ importPreview.errors.length }} 条异常</span>
+        </p>
+        <div v-if="importPreview.errors.length" class="preview-errors">
+          <p v-for="err in importPreview.errors" :key="err" class="error">{{ err }}</p>
+        </div>
+        <div class="preview-table-wrap">
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>用户名</th>
+                <th>姓名</th>
+                <th>密码</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in importPreview.rows" :key="i">
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.username }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.password.replace(/./g, '*') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-if="importPreview.rows.length === 0" class="empty">没有可导入的有效数据</p>
+        <div class="modal-actions">
+          <button class="cancel" @click="importPreview = null">取消</button>
+          <button :disabled="importPreview.rows.length === 0 || importing" @click="confirmImport">
+            {{ importing ? '导入中...' : '确认导入' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Import Result Modal -->
     <div v-if="importResult" class="modal-overlay" @click.self="importResult = null">
       <div class="modal">
@@ -182,6 +224,7 @@ const importing = ref(false)
 const importInput = ref(null)
 const importResult = ref(null)
 const showImportModal = ref(false)
+const importPreview = ref(null)
 const showUserForm = ref(false)
 const showSeatForm = ref(false)
 const editingSeatId = ref(null)
@@ -355,8 +398,40 @@ async function cancelCheckin(seat) {
 async function handleImport(event) {
   const file = event.target.files[0]
   if (!file) return
+  event.target.value = ''
+
+  const text = await file.text()
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  if (lines.length < 2) {
+    alert('文件内容为空或缺少数据行')
+    return
+  }
+
+  const header = lines[0].split(',').map(h => h.trim())
+  if (header.join(',') !== 'username,name,password') {
+    alert('表头必须为: username,name,password')
+    return
+  }
+
+  const rows = []
+  const errors = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim())
+    if (cols.length !== 3 || !cols[0] || !cols[1] || !cols[2]) {
+      errors.push(`第 ${i + 1} 行：字段不完整`)
+    } else {
+      rows.push({ username: cols[0], name: cols[1], password: cols[2] })
+    }
+  }
+
+  importPreview.value = { file, rows, errors, total: rows.length + errors.length }
+}
+
+async function confirmImport() {
+  if (!importPreview.value) return
   importing.value = true
-  importResult.value = null
+  const file = importPreview.value.file
+  importPreview.value = null
   try {
     const formData = new FormData()
     formData.append('file', file)
@@ -369,7 +444,6 @@ async function handleImport(event) {
     alert(e.response?.data?.detail || '导入失败')
   } finally {
     importing.value = false
-    event.target.value = ''
   }
 }
 
@@ -631,6 +705,52 @@ onMounted(() => {
 }
 .format-rules strong {
   color: #333;
+}
+.preview-summary {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.preview-errors {
+  margin-bottom: 0.5rem;
+}
+.preview-errors .error {
+  font-size: 0.8rem;
+  margin: 0.15rem 0;
+}
+.preview-table-wrap {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.preview-table th {
+  background: #f5f5f5;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+.preview-table td {
+  padding: 0.4rem 0.75rem;
+  border-top: 1px solid #f0f0f0;
+}
+.preview-table tr:hover td {
+  background: #fafafa;
+}
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 1rem;
+}
+.modal-wide {
+  max-width: 520px;
 }
 .modal-overlay {
   position: fixed;
