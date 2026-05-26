@@ -33,7 +33,7 @@
       </div>
 
       <div v-if="myFixedSeat || status.is_checked_in" class="my-seat-section">
-        <div class="section-title">我的座位</div>
+        <div class="my-seat-section-title">我的座位</div>
         <div v-if="status.is_checked_in" class="my-seat-card checked-in-card" @click="goToCheckinBySeatId(status.seat_id)">
           <div class="my-seat-icon">
             <span class="pulse-dot"></span>
@@ -42,7 +42,7 @@
             <div class="my-seat-name">{{ status.seat_name }}</div>
             <div class="my-seat-meta">已签到 · {{ formatTime(status.elapsed_minutes) }}</div>
           </div>
-          <div class="my-seat-action">签退</div>
+          <div class="my-seat-action">前往</div>
         </div>
         <div
           v-if="myFixedSeat && !status.is_checked_in"
@@ -131,7 +131,11 @@ function goToCheckin(seat) {
 
 function goToCheckinBySeatId(seatId) {
   const seat = seats.value.find(s => s.id === seatId)
-  if (seat) goToCheckin(seat)
+  if (seat) {
+    goToCheckin(seat)
+  } else {
+    router.push('/')
+  }
 }
 
 onMounted(async () => {
@@ -267,7 +271,7 @@ onMounted(async () => {
 .my-seat-section {
   margin-bottom: 1rem;
 }
-.section-title {
+.my-seat-section-title {
   font-size: 0.8rem;
   font-weight: 600;
   color: #999;
