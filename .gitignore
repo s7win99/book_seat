@@ -6,3 +6,6 @@ dist/
 .env
 .superpowers/
 venv/
+docs/
+test_e2e.py
+qrcode_test.png
