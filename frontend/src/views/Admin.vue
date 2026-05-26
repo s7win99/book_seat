@@ -12,7 +12,7 @@
       <div v-if="tab === 'users'">
         <div class="user-actions">
           <button class="btn-add" @click="showUserForm = true">+ 添加用户</button>
-          <button class="btn-batch" @click="$refs.importInput.click()" :disabled="importing">
+          <button class="btn-batch" @click="importInput.click()" :disabled="importing">
             {{ importing ? '导入中...' : '批量导入' }}
           </button>
           <input ref="importInput" type="file" accept=".csv" style="display:none" @change="handleImport" />
@@ -154,6 +154,7 @@ const users = ref([])
 const seats = ref([])
 const attendance = ref([])
 const importing = ref(false)
+const importInput = ref(null)
 const importResult = ref(null)
 const showUserForm = ref(false)
 const showSeatForm = ref(false)
