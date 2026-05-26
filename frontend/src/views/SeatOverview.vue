@@ -260,6 +260,11 @@ onMounted(async () => {
 }
 .seat-status {
   font-size: 0.8rem;
+  flex-shrink: 0;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .status-occupied {
   color: #4caf50;

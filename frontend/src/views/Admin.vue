@@ -506,10 +506,15 @@ onMounted(() => {
 }
 .row-info {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .row-info strong {
   display: block;
   font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .row-info .meta {
   font-size: 0.75rem;
@@ -518,6 +523,7 @@ onMounted(() => {
 .row-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 .row-actions button {
   padding: 0.375rem 0.75rem;

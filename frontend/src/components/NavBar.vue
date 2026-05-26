@@ -122,6 +122,12 @@ async function handleChangePassword() {
   gap: 0.75rem;
   font-size: 0.875rem;
 }
+.nav-user span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nav-user button {
   padding: 0.375rem 0.75rem;
   background: #f5f5f5;
