@@ -67,12 +67,8 @@ def apply_weekend_rule(db: Session, saturday: date, sunday: date) -> None:
             total = record.total_minutes + sun_record.total_minutes
 
             if sat_valid and sun_valid:
-                if total >= WEEKEND_TOTAL_MINUTES:
-                    record.is_valid = True
-                    sun_record.is_valid = True
-                else:
-                    record.is_valid = True
-                    sun_record.is_valid = True
+                record.is_valid = True
+                sun_record.is_valid = True
 
     db.commit()
 

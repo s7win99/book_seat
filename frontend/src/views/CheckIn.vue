@@ -77,7 +77,7 @@ const isMySeat = computed(() => seatInfo.value?.current_user_checked_in && seatI
 const isAlreadyCheckedIn = computed(() => seatInfo.value?.current_user_checked_in && seatInfo.value?.current_user_seat_id !== seatInfo.value?.id)
 const isAssignedToMe = computed(() => seatInfo.value?.assigned_user_id === auth.user?.id)
 const hasFixedSeat = computed(() => {
-  return seatInfo.value?.seat_type === 'shared' && auth.user?.role === 'user'
+  return seatInfo.value?.seat_type === 'shared' && seatInfo.value?.user_has_fixed_seat
 })
 
 function formatTime(minutes) {

@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Token(BaseModel):
@@ -15,13 +15,13 @@ class LoginRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     old_password: str
-    new_password: str
+    new_password: str = Field(min_length=6)
 
 
 class UserCreate(BaseModel):
     username: str
     name: str
-    password: str
+    password: str = Field(min_length=6)
 
 
 class UserUpdate(BaseModel):
@@ -57,6 +57,20 @@ class SeatOut(BaseModel):
     name: str
     seat_type: str
     token: str
+    assigned_user_id: Optional[int]
+    assigned_user_name: Optional[str] = None
+    is_occupied: bool = False
+    occupant_name: Optional[str] = None
+    occupant_user_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SeatPublic(BaseModel):
+    id: int
+    name: str
+    seat_type: str
     assigned_user_id: Optional[int]
     assigned_user_name: Optional[str] = None
     is_occupied: bool = False

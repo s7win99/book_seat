@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
+import threading
 from sqlalchemy.orm import Session
 from models import User, Seat, CheckInSession, Cooldown
 from config import COOLDOWN_MINUTES
+
+_checkin_lock = threading.Lock()
 
 
 class CheckInError(Exception):
@@ -43,47 +46,48 @@ def get_remaining_cooldown(db: Session, user_id: int) -> int:
 
 
 def perform_check_in(db: Session, user: User, seat: Seat, ip_address: str | None) -> CheckInSession:
-    active = get_active_session(db, user.id)
-    if active:
-        raise CheckInError("already_checked_in")
+    with _checkin_lock:
+        active = get_active_session(db, user.id)
+        if active:
+            raise CheckInError("already_checked_in")
 
-    # Fixed seat: only assigned user can check in
-    if seat.seat_type == "fixed":
-        if seat.assigned_user_id != user.id:
-            raise CheckInError("not_assigned_fixed_seat")
-    else:
-        # Shared seat: user with fixed seat cannot use shared seats
-        has_fixed = db.query(Seat).filter(
-            Seat.seat_type == "fixed",
-            Seat.assigned_user_id == user.id,
-        ).first()
-        if has_fixed:
-            raise CheckInError("user_has_fixed_seat")
+        # Fixed seat: only assigned user can check in
+        if seat.seat_type == "fixed":
+            if seat.assigned_user_id != user.id:
+                raise CheckInError("not_assigned_fixed_seat")
+        else:
+            # Shared seat: user with fixed seat cannot use shared seats
+            has_fixed = db.query(Seat).filter(
+                Seat.seat_type == "fixed",
+                Seat.assigned_user_id == user.id,
+            ).first()
+            if has_fixed:
+                raise CheckInError("user_has_fixed_seat")
 
-    occupant = get_seat_occupant(db, seat.id)
-    if occupant:
-        raise CheckInError("seat_occupied")
+        occupant = get_seat_occupant(db, seat.id)
+        if occupant:
+            raise CheckInError("seat_occupied")
 
-    if not check_cooldown(db, user.id):
-        raise CheckInError("cooldown_active")
+        if not check_cooldown(db, user.id):
+            raise CheckInError("cooldown_active")
 
-    session = CheckInSession(
-        user_id=user.id,
-        seat_id=seat.id,
-        check_in_time=datetime.utcnow(),
-        ip_address=ip_address,
-    )
-    db.add(session)
+        session = CheckInSession(
+            user_id=user.id,
+            seat_id=seat.id,
+            check_in_time=datetime.utcnow(),
+            ip_address=ip_address,
+        )
+        db.add(session)
 
-    cooldown = db.query(Cooldown).filter(Cooldown.user_id == user.id).first()
-    if cooldown:
-        cooldown.last_switch_time = datetime.utcnow()
-    else:
-        db.add(Cooldown(user_id=user.id, last_switch_time=datetime.utcnow()))
+        cooldown = db.query(Cooldown).filter(Cooldown.user_id == user.id).first()
+        if cooldown:
+            cooldown.last_switch_time = datetime.utcnow()
+        else:
+            db.add(Cooldown(user_id=user.id, last_switch_time=datetime.utcnow()))
 
-    db.commit()
-    db.refresh(session)
-    return session
+        db.commit()
+        db.refresh(session)
+        return session
 
 
 def perform_check_out(db: Session, user: User, seat_id: int) -> CheckInSession:
@@ -97,6 +101,13 @@ def perform_check_out(db: Session, user: User, seat_id: int) -> CheckInSession:
         raise CheckInError("cooldown_active")
 
     active.check_out_time = datetime.utcnow()
+
+    cooldown = db.query(Cooldown).filter(Cooldown.user_id == user.id).first()
+    if cooldown:
+        cooldown.last_switch_time = datetime.utcnow()
+    else:
+        db.add(Cooldown(user_id=user.id, last_switch_time=datetime.utcnow()))
+
     db.commit()
     db.refresh(active)
     return active
