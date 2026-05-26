@@ -135,3 +135,11 @@ class AdminAttendanceOut(BaseModel):
     records: list[AttendanceRecordOut]
     total_valid: int
     total_minutes: int
+
+
+class ImportResult(BaseModel):
+    total: int
+    success: int
+    skipped: int
+    skipped_users: list[str]
+    errors: list[str]

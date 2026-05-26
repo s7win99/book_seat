@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import csv
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Seat, CheckInSession, AttendanceRecord, Cooldown
-from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut
+from schemas import UserCreate, UserUpdate, UserOut, SeatCreate, SeatUpdate, SeatOut, AttendanceRecordOut, ImportResult
 from auth import hash_password, require_admin, require_superadmin
 from config import BASE_URL
 from datetime import datetime, date
@@ -68,6 +69,54 @@ def reset_password(user_id: int, admin: User = Depends(require_admin), db: Sessi
     user.password_hash = hash_password("123456")
     db.commit()
     return {"message": "Password reset to 123456"}
+
+
+@router.post("/users/import", response_model=ImportResult)
+def import_users(file: UploadFile = File(...), admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    content = file.file.read()
+    # Handle UTF-8 BOM
+    text = content.decode("utf-8-sig")
+    reader = csv.DictReader(text.splitlines())
+
+    if not reader.fieldnames or set(reader.fieldnames) != {"username", "name", "password"}:
+        raise HTTPException(status_code=400, detail="CSV 表头必须为: username,name,password")
+
+    total = 0
+    success = 0
+    skipped = []
+    errors = []
+
+    for i, row in enumerate(reader, start=2):
+        total += 1
+        username = row.get("username", "").strip()
+        name = row.get("name", "").strip()
+        password = row.get("password", "").strip()
+
+        if not username or not name or not password:
+            errors.append(f"第 {i} 行：字段不能为空")
+            continue
+
+        if db.query(User).filter(User.username == username).first():
+            skipped.append(username)
+            continue
+
+        user = User(
+            username=username,
+            name=name,
+            password_hash=hash_password(password),
+            role="user",
+        )
+        db.add(user)
+        success += 1
+
+    db.commit()
+    return ImportResult(
+        total=total,
+        success=success,
+        skipped=len(skipped),
+        skipped_users=skipped,
+        errors=errors,
+    )
 
 
 @router.put("/users/{user_id}/role")
