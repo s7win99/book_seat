@@ -353,7 +353,7 @@ def admin_attendance(
             "username": user.username,
             "name": user.name,
             "records": records,
-            "total_valid": sum(1 for r in records if r.is_valid),
+            "total_valid": sum(1 for r in records if r.is_valid) + sum(r.bonus for r in records),
             "total_minutes": sum(r.total_minutes for r in records),
         })
     return result

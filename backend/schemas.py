@@ -128,6 +128,7 @@ class AttendanceRecordOut(BaseModel):
     total_minutes: int
     is_valid: bool
     is_weekend: bool
+    bonus: int = 0
 
     class Config:
         from_attributes = True

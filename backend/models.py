@@ -56,6 +56,7 @@ class AttendanceRecord(Base):
     total_minutes = Column(Integer, default=0)
     is_valid = Column(Boolean, default=False)
     is_weekend = Column(Boolean, default=False)
+    bonus = Column(Integer, default=0)
 
     __table_args__ = (UniqueConstraint("user_id", "date", name="uq_user_date"),)
 

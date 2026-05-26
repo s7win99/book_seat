@@ -44,6 +44,7 @@
         <div v-for="record in records" :key="record.id" class="history-row">
           <span class="date">{{ record.date }}</span>
           <span class="minutes">{{ record.total_minutes }}min</span>
+          <span v-if="record.bonus" class="badge bonus">+{{ record.bonus }} 奖励</span>
           <span class="badge" :class="record.is_valid ? 'valid' : 'invalid'">
             {{ record.is_valid ? '有效' : '无效' }}
           </span>
@@ -65,7 +66,7 @@ const monthLabel = computed(() => {
   return currentDate.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })
 })
 
-const validCount = computed(() => records.value.filter(r => r.is_valid).length)
+const validCount = computed(() => records.value.filter(r => r.is_valid).length + records.value.reduce((sum, r) => sum + (r.bonus || 0), 0))
 const totalMinutes = computed(() => records.value.reduce((sum, r) => sum + r.total_minutes, 0))
 
 const calendarDays = computed(() => {
@@ -234,5 +235,9 @@ onMounted(async () => {
 .badge.invalid {
   background: #f5f5f5;
   color: #999;
+}
+.badge.bonus {
+  background: #fff3e0;
+  color: #e65100;
 }
 </style>

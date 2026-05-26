@@ -66,9 +66,15 @@ def apply_weekend_rule(db: Session, saturday: date, sunday: date) -> None:
             sun_valid = sun_record.total_minutes >= VALID_ATTENDANCE_MINUTES
             total = record.total_minutes + sun_record.total_minutes
 
+            # 每天独立判断
+            record.is_valid = sat_valid
+            sun_record.is_valid = sun_valid
+            record.bonus = 0
+            sun_record.bonus = 0
+
+            # 两天都有效 + 总时长 >= 540 → 额外奖励一次
             if sat_valid and sun_valid and total >= WEEKEND_TOTAL_MINUTES:
-                record.is_valid = True
-                sun_record.is_valid = True
+                sun_record.bonus = 1
 
     db.commit()
 
@@ -105,7 +111,7 @@ def get_leaderboard(db: Session, period: str) -> list[dict]:
             AttendanceRecord.date <= today,
         ).all()
 
-        valid_count = sum(1 for r in records if r.is_valid)
+        valid_count = sum(1 for r in records if r.is_valid) + sum(r.bonus for r in records)
         total_minutes = sum(r.total_minutes for r in records)
         rate = valid_count / weekdays_count
 
