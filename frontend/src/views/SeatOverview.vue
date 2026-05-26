@@ -32,6 +32,32 @@
         </button>
       </div>
 
+      <div v-if="myFixedSeat || status.is_checked_in" class="my-seat-section">
+        <div class="section-title">我的座位</div>
+        <div v-if="status.is_checked_in" class="my-seat-card checked-in-card" @click="goToCheckinBySeatId(status.seat_id)">
+          <div class="my-seat-icon">
+            <span class="pulse-dot"></span>
+          </div>
+          <div class="my-seat-info">
+            <div class="my-seat-name">{{ status.seat_name }}</div>
+            <div class="my-seat-meta">已签到 · {{ formatTime(status.elapsed_minutes) }}</div>
+          </div>
+          <div class="my-seat-action">签退</div>
+        </div>
+        <div
+          v-if="myFixedSeat && !status.is_checked_in"
+          class="my-seat-card fixed-card"
+          @click="goToCheckin(myFixedSeat)"
+        >
+          <div class="my-seat-icon fixed-icon">固定</div>
+          <div class="my-seat-info">
+            <div class="my-seat-name">{{ myFixedSeat.name }}</div>
+            <div class="my-seat-meta">固定座位</div>
+          </div>
+          <div class="my-seat-action">签到</div>
+        </div>
+      </div>
+
       <div class="seat-list">
         <div
           v-for="seat in filteredSeats"
@@ -63,7 +89,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '../components/NavBar.vue'
+import { useAuthStore } from '../stores/auth'
 import api from '../api'
+
+const auth = useAuthStore()
 
 const router = useRouter()
 const seats = ref([])
@@ -85,6 +114,10 @@ const filteredSeats = computed(() => {
   return seats.value
 })
 
+const myFixedSeat = computed(() => {
+  return seats.value.find(s => s.seat_type === 'fixed' && s.assigned_user_id === auth.user?.id) || null
+})
+
 function formatTime(minutes) {
   if (!minutes) return '0min'
   const h = Math.floor(minutes / 60)
@@ -94,6 +127,11 @@ function formatTime(minutes) {
 
 function goToCheckin(seat) {
   router.push(`/checkin?token=${seat.token}`)
+}
+
+function goToCheckinBySeatId(seatId) {
+  const seat = seats.value.find(s => s.id === seatId)
+  if (seat) goToCheckin(seat)
 }
 
 onMounted(async () => {
@@ -225,5 +263,80 @@ onMounted(async () => {
 }
 .status-free {
   color: #ccc;
+}
+.my-seat-section {
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #999;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.my-seat-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  cursor: pointer;
+  gap: 0.75rem;
+}
+.my-seat-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.my-seat-card.checked-in-card {
+  border-left: 4px solid #4caf50;
+}
+.my-seat-card.fixed-card {
+  border-left: 4px solid #2196f3;
+}
+.my-seat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.my-seat-icon.fixed-icon {
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+.pulse-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #4caf50;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.my-seat-info {
+  flex: 1;
+  min-width: 0;
+}
+.my-seat-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.my-seat-meta {
+  font-size: 0.75rem;
+  color: #999;
+}
+.my-seat-action {
+  font-size: 0.8rem;
+  color: #4caf50;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 </style>
