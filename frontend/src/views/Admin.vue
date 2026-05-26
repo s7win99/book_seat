@@ -15,7 +15,7 @@
           <button class="btn-batch" @click="showImportModal = true" :disabled="importing">
             {{ importing ? '导入中...' : '批量导入' }}
           </button>
-          <input ref="importInput" type="file" accept=".csv" style="display:none" @change="handleImport" />
+          <input ref="importInput" type="file" accept=".csv,.txt" style="display:none" @change="handleImport" />
         </div>
         <div v-if="showUserForm" class="form-card">
           <input v-model="userForm.username" placeholder="用户名" />
@@ -124,7 +124,7 @@
     <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
       <div class="modal">
         <h3>批量导入用户</h3>
-        <p>请上传 CSV 文件，格式要求：</p>
+        <p>请上传 CSV 或 TXT 文件，格式要求：</p>
         <div class="format-example">
           <code>username,name,password</code><br>
           <code>zhangsan,张三,123456</code><br>
@@ -134,6 +134,7 @@
           <li>第一行必须为表头：<strong>username,name,password</strong></li>
           <li>三个字段均为必填</li>
           <li>用户名重复的行会自动跳过</li>
+          <li>文件格式：CSV 或 TXT</li>
           <li>文件编码：UTF-8</li>
           <li>文件大小限制：2MB</li>
         </ul>
