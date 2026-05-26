@@ -21,11 +21,22 @@ fi
 echo "[1/6] 安装系统依赖..."
 if command -v apt-get &> /dev/null; then
   apt-get update -qq
-  apt-get install -y -qq python3 python3-pip python3-venv nodejs npm nginx git
+  apt-get install -y -qq python3 python3-pip python3-venv nginx git curl
+  # 安装 Node.js 20（系统自带版本过低）
+  if ! node -v 2>/dev/null | grep -qE "v(2[0-9]|[3-9])"; then
+    echo "  安装 Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y -qq nodejs
+  fi
 elif command -v yum &> /dev/null; then
-  yum install -y python3 python3-pip nodejs npm nginx git
+  yum install -y python3 python3-pip nginx git curl
+  if ! node -v 2>/dev/null | grep -qE "v(2[0-9]|[3-9])"; then
+    echo "  安装 Node.js 20..."
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    yum install -y nodejs
+  fi
 else
-  echo "不支持的包管理器，请手动安装：python3, pip, nodejs, npm, nginx, git"
+  echo "不支持的包管理器，请手动安装：python3, pip, nodejs 20+, npm, nginx, git"
   exit 1
 fi
 
