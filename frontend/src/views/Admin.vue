@@ -683,7 +683,7 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 .modal-actions button.cancel {
-  background: #f5f5f5;
-  color: #666;
+  background: #666;
+  color: white;
 }
 </style>
