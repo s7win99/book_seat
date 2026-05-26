@@ -74,8 +74,17 @@ def reset_password(user_id: int, admin: User = Depends(require_admin), db: Sessi
 @router.post("/users/import", response_model=ImportResult)
 def import_users(file: UploadFile = File(...), admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     content = file.file.read()
-    # Handle UTF-8 BOM
-    text = content.decode("utf-8-sig")
+
+    # Fix 1: File size limit (2 MB)
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="文件大小不能超过 2MB")
+
+    # Fix 2: Handle encoding errors
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="文件编码错误，请使用 UTF-8 编码的 CSV 文件")
+
     reader = csv.DictReader(text.splitlines())
 
     if not reader.fieldnames or set(reader.fieldnames) != {"username", "name", "password"}:
@@ -85,6 +94,7 @@ def import_users(file: UploadFile = File(...), admin: User = Depends(require_adm
     success = 0
     skipped = []
     errors = []
+    seen_usernames = set()  # Fix 3: Track seen usernames within batch
 
     for i, row in enumerate(reader, start=2):
         total += 1
@@ -96,10 +106,12 @@ def import_users(file: UploadFile = File(...), admin: User = Depends(require_adm
             errors.append(f"第 {i} 行：字段不能为空")
             continue
 
-        if db.query(User).filter(User.username == username).first():
+        # Fix 3: Check both DB and in-batch duplicates
+        if username in seen_usernames or db.query(User).filter(User.username == username).first():
             skipped.append(username)
             continue
 
+        seen_usernames.add(username)
         user = User(
             username=username,
             name=name,
