@@ -1,5 +1,8 @@
 import os
 import secrets
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lab_attendance.db")
 _default_secret = secrets.token_urlsafe(32)

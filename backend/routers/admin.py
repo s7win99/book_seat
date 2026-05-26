@@ -1,5 +1,5 @@
 import csv
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
@@ -10,6 +10,16 @@ from config import BASE_URL
 from datetime import datetime, date
 import io
 import qrcode
+
+
+def get_base_url(request: Request) -> str:
+    if forwarded_host := request.headers.get("x-forwarded-host"):
+        proto = request.headers.get("x-forwarded-proto", "http")
+        return f"{proto}://{forwarded_host}"
+    if host := request.headers.get("host"):
+        proto = request.headers.get("x-forwarded-proto", "http")
+        return f"{proto}://{host}"
+    return BASE_URL
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -360,14 +370,15 @@ def admin_attendance(
 
 
 @router.get("/seats/{seat_id}/qrcode")
-def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def get_seat_qrcode(seat_id: int, request: Request, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     from PIL import Image, ImageDraw, ImageFont
 
     seat = db.query(Seat).filter(Seat.id == seat_id).first()
     if not seat:
         raise HTTPException(status_code=404, detail="Seat not found")
 
-    url = f"{BASE_URL}/checkin?token={seat.token}"
+    base_url = get_base_url(request)
+    url = f"{base_url}/checkin?token={seat.token}"
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(url)
     qr.make(fit=True)
@@ -395,7 +406,7 @@ def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Sess
 
 
 @router.get("/seats/qrcode-batch")
-def batch_qrcode(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def batch_qrcode(request: Request, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     import zipfile
     from PIL import Image, ImageDraw, ImageFont
 
@@ -403,8 +414,10 @@ def batch_qrcode(admin: User = Depends(require_admin), db: Session = Depends(get
     if not seats:
         raise HTTPException(status_code=400, detail="没有座位可导出")
 
+    base_url = get_base_url(request)
+
     def generate_labeled_qr(seat):
-        url = f"{BASE_URL}/checkin?token={seat.token}"
+        url = f"{base_url}/checkin?token={seat.token}"
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(url)
         qr.make(fit=True)
