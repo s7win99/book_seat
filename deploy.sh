@@ -55,7 +55,8 @@ echo "[3/6] 安装后端依赖..."
 cd "$INSTALL_DIR/backend"
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -q -r requirements.txt
+python init_db.py
 deactivate
 
 # 构建前端
