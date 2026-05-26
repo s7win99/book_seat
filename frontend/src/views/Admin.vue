@@ -669,7 +669,9 @@ onMounted(() => {
 }
 .modal-actions {
   margin-top: 1rem;
-  text-align: right;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 .modal-actions button {
   padding: 0.5rem 1.5rem;
@@ -679,5 +681,9 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
+}
+.modal-actions button.cancel {
+  background: #f5f5f5;
+  color: #666;
 }
 </style>
