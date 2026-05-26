@@ -12,7 +12,7 @@
       <div v-if="tab === 'users'">
         <div class="user-actions">
           <button class="btn-add" @click="showUserForm = true">+ 添加用户</button>
-          <button class="btn-batch" @click="importInput.click()" :disabled="importing">
+          <button class="btn-batch" @click="showImportModal = true" :disabled="importing">
             {{ importing ? '导入中...' : '批量导入' }}
           </button>
           <input ref="importInput" type="file" accept=".csv" style="display:none" @change="handleImport" />
@@ -120,6 +120,30 @@
       </div>
     </div>
 
+    <!-- Import Format Modal -->
+    <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
+      <div class="modal">
+        <h3>批量导入用户</h3>
+        <p>请上传 CSV 文件，格式要求：</p>
+        <div class="format-example">
+          <code>username,name,password</code><br>
+          <code>zhangsan,张三,123456</code><br>
+          <code>lisi,李四,abcdef</code>
+        </div>
+        <ul class="format-rules">
+          <li>第一行必须为表头：<strong>username,name,password</strong></li>
+          <li>三个字段均为必填</li>
+          <li>用户名重复的行会自动跳过</li>
+          <li>文件编码：UTF-8</li>
+          <li>文件大小限制：2MB</li>
+        </ul>
+        <div class="modal-actions">
+          <button class="cancel" @click="showImportModal = false">取消</button>
+          <button @click="showImportModal = false; importInput.click()">选择文件</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Import Result Modal -->
     <div v-if="importResult" class="modal-overlay" @click.self="importResult = null">
       <div class="modal">
@@ -156,6 +180,7 @@ const attendance = ref([])
 const importing = ref(false)
 const importInput = ref(null)
 const importResult = ref(null)
+const showImportModal = ref(false)
 const showUserForm = ref(false)
 const showSeatForm = ref(false)
 const editingSeatId = ref(null)
@@ -581,6 +606,30 @@ onMounted(() => {
   color: #e65100;
   font-size: 0.85rem;
   margin: 0;
+}
+.format-example {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+.format-example code {
+  background: #e8e8e8;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.format-rules {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.8;
+}
+.format-rules strong {
+  color: #333;
 }
 .modal-overlay {
   position: fixed;
