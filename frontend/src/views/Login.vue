@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>实验室考勤系统</h2>
+      <h2>QFNUACM实验室考勤系统</h2>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label>用户名</label>

@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar">
-    <div class="nav-brand">实验室座位系统</div>
+    <div class="nav-brand">QFNUACM实验室出勤系统</div>
     <div class="nav-links">
       <router-link to="/">座位</router-link>
       <router-link to="/attendance">我的出勤</router-link>
