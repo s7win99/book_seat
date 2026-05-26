@@ -15,7 +15,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - 实验室座位系统` : '实验室座位系统'
+  document.title = to.meta.title || '实验室座位系统'
   const token = localStorage.getItem('token')
   if (to.meta.requiresAuth && !token) {
     localStorage.setItem('redirectAfterLogin', to.fullPath)
