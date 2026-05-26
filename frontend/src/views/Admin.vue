@@ -10,7 +10,13 @@
 
       <!-- Users Tab -->
       <div v-if="tab === 'users'">
-        <button class="btn-add" @click="showUserForm = true">+ 添加用户</button>
+        <div class="user-actions">
+          <button class="btn-add" @click="showUserForm = true">+ 添加用户</button>
+          <button class="btn-batch" @click="$refs.importInput.click()" :disabled="importing">
+            {{ importing ? '导入中...' : '批量导入' }}
+          </button>
+          <input ref="importInput" type="file" accept=".csv" style="display:none" @change="handleImport" />
+        </div>
         <div v-if="showUserForm" class="form-card">
           <input v-model="userForm.username" placeholder="用户名" />
           <input v-model="userForm.name" placeholder="姓名" />
@@ -113,6 +119,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Import Result Modal -->
+    <div v-if="importResult" class="modal-overlay" @click.self="importResult = null">
+      <div class="modal">
+        <h3>导入结果</h3>
+        <p>总计：{{ importResult.total }} 人</p>
+        <p class="success">成功导入：{{ importResult.success }} 人</p>
+        <p v-if="importResult.skipped > 0" class="skipped">
+          跳过（用户名已存在）：{{ importResult.skipped }} 人
+          <span v-if="importResult.skipped_users.length"> — {{ importResult.skipped_users.join('、') }}</span>
+        </p>
+        <p v-if="importResult.errors.length > 0" class="error">
+          {{ importResult.errors.join('；') }}
+        </p>
+        <div class="modal-actions">
+          <button @click="importResult = null">确定</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -128,6 +153,8 @@ const tab = ref('users')
 const users = ref([])
 const seats = ref([])
 const attendance = ref([])
+const importing = ref(false)
+const importResult = ref(null)
 const showUserForm = ref(false)
 const showSeatForm = ref(false)
 const editingSeatId = ref(null)
@@ -295,6 +322,27 @@ async function cancelCheckin(seat) {
     await loadSeats()
   } catch (e) {
     alert(e.response?.data?.detail || '取消签到失败')
+  }
+}
+
+async function handleImport(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  importing.value = true
+  importResult.value = null
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/api/admin/users/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    importResult.value = res.data
+    await loadUsers()
+  } catch (e) {
+    alert(e.response?.data?.detail || '导入失败')
+  } finally {
+    importing.value = false
+    event.target.value = ''
   }
 }
 
@@ -512,5 +560,68 @@ onMounted(() => {
   border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+.user-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.user-actions .btn-add {
+  flex: 1;
+  margin-bottom: 0;
+}
+.skipped {
+  color: #e65100;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+.modal p {
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+}
+.modal .success {
+  color: #2e7d32;
+  font-weight: 600;
+}
+.modal .error {
+  color: #e53935;
+  font-size: 0.85rem;
+}
+.modal-actions {
+  margin-top: 1rem;
+  text-align: right;
+}
+.modal-actions button {
+  padding: 0.5rem 1.5rem;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 </style>
