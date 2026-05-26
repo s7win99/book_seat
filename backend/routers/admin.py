@@ -375,13 +375,13 @@ def get_seat_qrcode(seat_id: int, admin: User = Depends(require_admin), db: Sess
 
     # Create canvas: QR code + space for text below
     qr_w, qr_h = qr_img.size
-    text_height = 40
+    text_height = 60
     canvas = Image.new("RGB", (qr_w, qr_h + text_height), "white")
     canvas.paste(qr_img, (0, 0))
 
     # Draw seat name centered below QR code
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.load_default(size=20)
+    font = ImageFont.load_default(size=48)
     bbox = draw.textbbox((0, 0), seat.name, font=font)
     text_w = bbox[2] - bbox[0]
     text_x = (qr_w - text_w) // 2
@@ -410,11 +410,11 @@ def batch_qrcode(admin: User = Depends(require_admin), db: Session = Depends(get
         qr.make(fit=True)
         qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
         qr_w, qr_h = qr_img.size
-        text_height = 40
+        text_height = 60
         canvas = Image.new("RGB", (qr_w, qr_h + text_height), "white")
         canvas.paste(qr_img, (0, 0))
         draw = ImageDraw.Draw(canvas)
-        font = ImageFont.load_default(size=20)
+        font = ImageFont.load_default(size=48)
         bbox = draw.textbbox((0, 0), seat.name, font=font)
         text_w = bbox[2] - bbox[0]
         text_x = (qr_w - text_w) // 2
